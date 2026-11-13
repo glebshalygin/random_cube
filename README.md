@@ -6,8 +6,6 @@
 
 Pure HTML, CSS and JavaScript · no libraries · no build step · works offline
 
-[**▶ Live demo**](https://YOUR-USERNAME.github.io/random-cube/)
-
 </div>
 
 ---
