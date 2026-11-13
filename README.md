@@ -6,6 +6,8 @@
 
 Pure HTML, CSS and JavaScript · no libraries · no build step · works offline
 
+https://glebshalygin.github.io/random_cube/
+
 </div>
 
 ---
