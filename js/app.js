@@ -1,8 +1,8 @@
 /* =========================================================
-   Random Cube — логика
-   Чистый JavaScript без библиотек. 3D — это CSS-трансформации,
-   а физика броска, свет и тени считаются здесь, только во время броска.
-   В покое страница не тратит ни одного кадра.
+   Random Cube — logic
+   Plain JavaScript, no libraries. The 3D is CSS transforms;
+   roll physics, lighting and shadows are computed here, only while rolling.
+   When the die is at rest, the page doesn't spend a single frame.
    ========================================================= */
 (() => {
   'use strict';
@@ -15,7 +15,7 @@
   const MAX_N = 1000000;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  /* ---------- хранилище (может быть недоступно — тогда просто не сохраняем) ---------- */
+  /* ---------- storage (may be unavailable; then we simply don't save) ---------- */
   const store = {
     get(key, fallback) {
       try {
@@ -28,8 +28,8 @@
     }
   };
 
-  /* ---------- аналог Python random.randint(a, b) ----------
-     Криптостойкий генератор + отбраковка, чтобы не было перекоса. */
+  /* ---------- port of Python's random.randint(a, b) ----------
+     Cryptographic RNG + rejection sampling, so there's no bias. */
   function randint(a, b) {
     const range = b - a + 1;
     if (!(window.crypto && crypto.getRandomValues)) {
@@ -42,7 +42,7 @@
     return a + (x % range);
   }
 
-  /* ---------- векторы и кватернионы ---------- */
+  /* ---------- vectors and quaternions ---------- */
   const V = {
     dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
     cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
@@ -50,14 +50,14 @@
     norm(a) { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
   };
 
-  // кватернион: [x, y, z, w]
+  // quaternion: [x, y, z, w]
   const Q = {
     id: () => [0, 0, 0, 1],
     axis(ax, ang) {
       const n = V.norm(ax), s = Math.sin(ang / 2);
       return [n[0] * s, n[1] * s, n[2] * s, Math.cos(ang / 2)];
     },
-    mul(a, b) { // сначала b, потом a
+    mul(a, b) { // b first, then a
       const [ax, ay, az, aw] = a, [bx, by, bz, bw] = b;
       return [
         aw * bx + ax * bw + ay * bz - az * by,
@@ -80,7 +80,7 @@
       }
       return Q.normalize([a[0] * k0 + bx * k1, a[1] * k0 + by * k1, a[2] * k0 + bz * k1, a[3] * k0 + bw * k1]);
     },
-    fromTo(u, v) { // поворот, переводящий единичный вектор u в v
+    fromTo(u, v) { // rotation taking unit vector u to v
       const d = V.dot(u, v);
       if (d > 0.99999) return Q.id();
       if (d < -0.99999) {
@@ -91,7 +91,7 @@
       const c = V.cross(u, v);
       return Q.normalize([c[0], c[1], c[2], 1 + d]);
     },
-    mat(q) { // 3x3, построчно
+    mat(q) { // 3x3, row-major
       const [x, y, z, w] = q;
       return [
         1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w),
@@ -105,7 +105,7 @@
     m[3] * v[0] + m[4] * v[1] + m[5] * v[2],
     m[6] * v[0] + m[7] * v[1] + m[8] * v[2]
   ];
-  const mulMtV = (m, v) => [ // транспонированная матрица на вектор
+  const mulMtV = (m, v) => [ // transposed matrix times vector
     m[0] * v[0] + m[3] * v[1] + m[6] * v[2],
     m[1] * v[0] + m[4] * v[1] + m[7] * v[2],
     m[2] * v[0] + m[5] * v[1] + m[8] * v[2]
@@ -123,18 +123,18 @@
     return n1 * (x -= 2.625 / d1) * x + 0.984375;
   }
 
-  /* ---------- камера и свет (в координатах стола; y смотрит вниз, как в CSS) ---------- */
-  const CAM_TILT = -34; // градусы, совпадает с .world в CSS
+  /* ---------- camera and light (table coordinates; y points down, as in CSS) ---------- */
+  const CAM_TILT = -34; // degrees, matches .world in CSS
   const camA = CAM_TILT * Math.PI / 180;
   const CAM = [1, 0, 0, 0, Math.cos(camA), -Math.sin(camA), 0, Math.sin(camA), Math.cos(camA)];
   const UP = [0, -1, 0];
-  const VIEW = V.norm(mulMtV(CAM, [0, 0, 1]));                    // направление на зрителя
-  const LIGHT = V.norm(mulMtV(CAM, V.norm([-0.5, -0.95, 0.55])));  // свет сверху-слева-спереди
-  const HALF = V.norm(V.add(LIGHT, VIEW));                         // для блика (Блинн — Фонг)
-  const SHADOW_DIR = V.norm([-LIGHT[0], 0, -LIGHT[2]]);            // куда падает тень по столу
+  const VIEW = V.norm(mulMtV(CAM, [0, 0, 1]));                    // direction toward the viewer
+  const LIGHT = V.norm(mulMtV(CAM, V.norm([-0.5, -0.95, 0.55])));  // light from top-left-front
+  const HALF = V.norm(V.add(LIGHT, VIEW));                         // for the highlight (Blinn-Phong)
+  const SHADOW_DIR = V.norm([-LIGHT[0], 0, -LIGHT[2]]);            // where the shadow falls on the table
 
-  /* ---------- грани ---------- */
-  // n — нормаль грани, u — «верх» цифры на грани (в координатах кубика)
+  /* ---------- faces ---------- */
+  // n is the face normal, u is the "up" of the number on the face (die coordinates)
   const FACES = [
     { n: [0, 0, 1],  u: [0, -1, 0], css: 'translateZ(var(--h))' },
     { n: [0, 0, -1], u: [0, -1, 0], css: 'rotateY(180deg) translateZ(var(--h))' },
@@ -143,7 +143,7 @@
     { n: [0, -1, 0], u: [0, 0, -1], css: 'rotateX(90deg) translateZ(var(--h))' },
     { n: [0, 1, 0],  u: [0, 0, 1],  css: 'rotateX(-90deg) translateZ(var(--h))' }
   ];
-  // настоящий шестигранник: сумма противоположных граней = 7
+  // a real d6: opposite faces add up to 7
   const STD = [1, 6, 3, 4, 2, 5];
 
   const PIP_POS = { tl: [25, 25], tr: [75, 25], ml: [25, 50], c: [50, 50], mr: [75, 50], bl: [25, 75], br: [75, 75] };
@@ -197,7 +197,7 @@
     return { n: f.n, u: f.u, el, content, shade, gloss, value: 0, lastShade: -1, lastGloss: -1 };
   });
 
-  function needsMark(v) { // подчёркиваем 6 и 9 (и похожие), чтобы не путать вверх ногами
+  function needsMark(v) { // underline 6 and 9 (and similar) so they aren't confused upside down
     const s = String(v);
     if (!/^[01689]+$/.test(s)) return false;
     const rot = { 0: '0', 1: '1', 6: '9', 8: '8', 9: '6' };
@@ -221,9 +221,9 @@
     }
   }
 
-  /* ---------- состояние ---------- */
+  /* ---------- state ---------- */
   let n = sanitizeN(store.get('n', 6)) || 6;
-  let S = 120; // размер кубика в px (читается из CSS)
+  let S = 120; // die size in px (read from CSS)
   const st = { q: Q.id(), x: 0, z: 0, rolling: false };
   let history = Array.isArray(store.get('history', [])) ? store.get('history', []).slice(0, 60) : [];
 
@@ -237,7 +237,7 @@
     S = faces[0].el.offsetWidth || S;
   }
 
-  /* ---------- раскладка значений по граням ---------- */
+  /* ---------- assigning values to faces ---------- */
   function shuffle(a) {
     for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -295,8 +295,8 @@
     return best;
   }
 
-  /* Для N ≠ 6 нужное число пишем на грань, которую сейчас не видно —
-     поэтому подмена незаметна, а кубик выглядит «честным». */
+  /* For N ≠ 6 the rolled number goes onto a face that's currently hidden,
+     so the swap is invisible and the die looks "honest". */
   function prepareFaces(value) {
     if (n === 6) return STD.indexOf(value);
     const pips = n <= 6;
@@ -317,7 +317,7 @@
     return k;
   }
 
-  /* Ориентация, при которой грань k смотрит вверх, а цифра читается зрителю */
+  /* Orientation where face k points up and its number reads upright for the viewer */
   function targetQuat(k, jitter) {
     const qa = Q.fromTo(faces[k].n, UP);
     const u = mulMV(Q.mat(qa), faces[k].u);
@@ -328,14 +328,14 @@
 
   const niceJitter = () => (Math.random() < 0.5 ? -1 : 1) * rand(0.32, 0.62);
 
-  /* ---------- отрисовка кадра ---------- */
-  const RADIUS = 0.1; // скругление кубика в долях размера (для касания со столом)
+  /* ---------- rendering a frame ---------- */
+  const RADIUS = 0.1; // corner rounding as a fraction of size (for table contact)
   const f6 = (v) => (Math.abs(v) < 1e-7 ? 0 : v.toFixed(5));
 
   function render(q, x, h, z) {
     const m = Q.mat(q);
     const half = S / 2, r = S * RADIUS;
-    // самая нижняя точка скруглённого кубика — чтобы он перекатывался по рёбрам, а не проваливался
+    // lowest point of the rounded die, so it rocks on its edges instead of sinking into the table
     const lowest = (half - r) * (Math.abs(m[3]) + Math.abs(m[4]) + Math.abs(m[5])) + r;
     const px = x * S, pz = z * S;
     const py = half - lowest - h;
@@ -344,7 +344,7 @@
       `matrix3d(${f6(m[0])},${f6(m[3])},${f6(m[6])},0,${f6(m[1])},${f6(m[4])},${f6(m[7])},0,` +
       `${f6(m[2])},${f6(m[5])},${f6(m[8])},0,${f6(px)},${f6(py)},${f6(pz)},1)`;
 
-    // динамический свет на каждой видимой грани
+    // dynamic lighting on every visible face
     for (const f of faces) {
       const nw = mulMV(m, f.n);
       if (V.dot(nw, VIEW) <= 0) continue;
@@ -356,8 +356,8 @@
       if (gl !== f.lastGloss) { f.gloss.style.opacity = gl; f.lastGloss = gl; }
     }
 
-    // тень на столе: смещается от света, расплывается и бледнеет с высотой
-    const lift = h / S; // высота нижней точки кубика над столом
+    // table shadow: offset away from the light, spreads and fades with height
+    const lift = h / S; // height of the die's lowest point above the table
     const off = S * (0.1 + lift * 0.45);
     const sx = px + SHADOW_DIR[0] * off, sz = pz + SHADOW_DIR[2] * off;
     const sc = 1 + lift * 0.55;
@@ -365,7 +365,7 @@
     shadowEl.style.opacity = f6(1 / (1 + lift * 1.6));
   }
 
-  /* ---------- звук (синтез WebAudio, без файлов) ---------- */
+  /* ---------- sound (synthesized with Web Audio, no files) ---------- */
   const Sound = {
     on: store.get('sound', true) !== false,
     ctx: null,
@@ -433,7 +433,7 @@
     }
   };
 
-  /* ---------- бросок ---------- */
+  /* ---------- roll ---------- */
   const IMPACTS = [1 / 2.75, 2 / 2.75, 2.5 / 2.75, 2.625 / 2.75];
   const IMPACT_VOL = [1, 0.45, 0.22, 0.1];
 
@@ -451,7 +451,7 @@
     const q1 = targetQuat(k, niceJitter());
     const x0 = st.x, z0 = st.z;
 
-    // куда приземлится: недалеко от центра, но не на то же место
+    // landing spot: near the center, but not the same spot
     let x1 = 0, z1 = 0, dist = 0;
     for (let i = 0; i < 8; i++) {
       x1 = rand(-0.5, 0.5);
@@ -460,7 +460,7 @@
       if (dist > 0.45) break;
     }
     const dir = dist > 1e-3 ? [(x1 - x0) / dist, 0, (z1 - z0) / dist] : [1, 0, 0];
-    // ось кувырка: перпендикулярна движению (катится вперёд) + немного хаоса
+    // tumble axis: perpendicular to travel (rolls forward) + a bit of chaos
     const axis = V.norm(V.add(V.cross(dir, [0, 1, 0]), [rand(-.35, .35), rand(-.35, .35), rand(-.35, .35)]));
     const spins = reduce ? 0 : (Math.random() < 0.5 ? 2 : 3);
     const dur = reduce ? 450 : rand(1450, 1750);
@@ -516,7 +516,7 @@
       setBusy(false);
       showResult(value, N);
       pushHistory(value, N);
-      commitInput(); // если N меняли во время броска
+      commitInput(); // in case N was changed mid-roll
     }
 
     requestAnimationFrame(frame);
@@ -527,18 +527,18 @@
     readoutEl.classList.toggle('rolling', on);
     if (on) {
       readoutEl.classList.remove('crit', 'low');
-      labelEl.textContent = 'Бросаем…';
+      labelEl.textContent = 'Rolling…';
     }
   }
 
   function showResult(value, N) {
     resultEl.textContent = value;
-    rangeNoteEl.textContent = `от 1 до ${N.toLocaleString('ru-RU')}`;
+    rangeNoteEl.textContent = `from 1 to ${N.toLocaleString('en-US')}`;
     const isMax = N > 1 && value === N;
     const isMin = N > 2 && value === 1;
     readoutEl.classList.toggle('crit', isMax);
     readoutEl.classList.toggle('low', isMin);
-    labelEl.textContent = isMax ? 'Максимум!' : isMin ? 'Единица' : 'Выпало';
+    labelEl.textContent = isMax ? 'Max roll!' : isMin ? 'Lowest roll' : 'You rolled';
 
     if (!reduceMotion.matches && resultEl.animate) {
       resultEl.animate(
@@ -582,7 +582,7 @@
     fxEl.appendChild(frag);
   }
 
-  /* ---------- история и статистика ---------- */
+  /* ---------- history and stats ---------- */
   function pushHistory(value, N) {
     history.unshift({ v: value, n: N });
     if (history.length > 60) history.length = 60;
@@ -598,12 +598,12 @@
         if (i === 0 && animateFirst) cls.push('new');
         if (h.n > 1 && h.v === h.n) cls.push('max');
         else if (h.n > 2 && h.v === 1) cls.push('min');
-        return `<li class="${cls.join(' ')}" title="от 1 до ${h.n}">${h.v}</li>`;
+        return `<li class="${cls.join(' ')}" title="from 1 to ${h.n}">${h.v}</li>`;
       })
       .join('');
     historyEmptyEl.hidden = history.length > 0;
 
-    statCount.textContent = history.length ? history.length.toLocaleString('ru-RU') : '0';
+    statCount.textContent = history.length ? history.length.toLocaleString('en-US') : '0';
     if (history.length) {
       const avg = history.reduce((s, h) => s + h.v, 0) / history.length;
       const exp = history.reduce((s, h) => s + (h.n + 1) / 2, 0) / history.length;
@@ -615,9 +615,9 @@
     }
   }
 
-  const fmt = (x) => x.toLocaleString('ru-RU', { maximumFractionDigits: x >= 1000 ? 0 : 2 });
+  const fmt = (x) => x.toLocaleString('en-US', { maximumFractionDigits: x >= 1000 ? 0 : 2 });
 
-  /* ---------- выбор N ---------- */
+  /* ---------- choosing N ---------- */
   function setN(v, fromInput) {
     v = sanitizeN(v);
     if (!v) return;
@@ -627,14 +627,14 @@
     if (v === n) return;
     n = v;
     store.set('n', n);
-    rangeNoteEl.textContent = `от 1 до ${n.toLocaleString('ru-RU')}`;
+    rangeNoteEl.textContent = `from 1 to ${n.toLocaleString('en-US')}`;
     if (!history.length) statExp.textContent = fmt((n + 1) / 2);
-    if (st.rolling) return; // применим после приземления
+    if (st.rolling) return; // applied after landing
 
     const top = faces[upFaceIndex(st.q)].value;
     assignAll(top <= n ? top : null);
     readoutEl.classList.remove('crit', 'low');
-    labelEl.textContent = 'Готов к броску';
+    labelEl.textContent = 'Ready to roll';
     resultEl.textContent = '?';
     faces.forEach((f) => {
       if (f.content.animate && !reduceMotion.matches) {
@@ -655,7 +655,7 @@
     }
   }
 
-  // грани показывают точки, а нужны цифры (или наоборот) — например, N сменили во время броска
+  // faces show pips but need numbers (or vice versa), e.g. N was changed mid-roll
   function faceModeMismatch() {
     const hasPips = !!faces[0].content.querySelector('.pip');
     if (hasPips !== (n <= 6)) return true;
@@ -679,7 +679,7 @@
     if (b) setN(Number(b.dataset.n));
   });
 
-  /* ---------- материал и звук ---------- */
+  /* ---------- material and sound ---------- */
   function setSkin(skin) {
     if (!['ivory', 'onyx', 'ruby'].includes(skin)) skin = 'ivory';
     dieEl.dataset.skin = skin;
@@ -698,7 +698,7 @@
     if (Sound.on) Sound.clack(0.6);
   });
 
-  /* ---------- управление ---------- */
+  /* ---------- controls ---------- */
   rollBtn.addEventListener('click', roll);
   stageEl.addEventListener('click', roll);
 
@@ -740,8 +740,8 @@
       try { ok = document.execCommand('copy'); } catch (__) { ok = false; }
       ta.remove();
     }
-    btn.textContent = ok ? 'Скопировано ✓' : 'Не вышло';
-    setTimeout(() => { btn.textContent = 'Копировать'; }, 1600);
+    btn.textContent = ok ? 'Copied ✓' : 'Copy failed';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 1600);
   });
 
   let resizeRaf = 0;
@@ -753,15 +753,15 @@
     });
   });
 
-  /* ---------- старт ---------- */
+  /* ---------- start ---------- */
   setSkin(store.get('skin', 'ivory'));
   setSound(Sound.on);
   nInput.value = n;
   presetsEl.querySelectorAll('button').forEach((b) => b.classList.toggle('active', Number(b.dataset.n) === n));
-  rangeNoteEl.textContent = `от 1 до ${n.toLocaleString('ru-RU')}`;
+  rangeNoteEl.textContent = `from 1 to ${n.toLocaleString('en-US')}`;
   measure();
   assignAll(null);
-  st.q = targetQuat(n === 6 ? 0 : 4, -0.48); // для d6 сверху «единица»
+  st.q = targetQuat(n === 6 ? 0 : 4, -0.48); // on a d6, the "1" faces up
   render(st.q, 0, 0, 0);
   renderHistory(false);
 })();

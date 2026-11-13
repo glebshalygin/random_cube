@@ -1,22 +1,22 @@
-"""Random Cube — бросок кубика: случайное число от 1 до N."""
+"""Random Cube — roll a die: a random number from 1 to N."""
 import random
 
 
 def roll(n: int) -> int:
-    """Случайное целое от 1 до n включительно."""
+    """Random integer from 1 to n, inclusive."""
     return random.randint(1, n)
 
 
 def main() -> None:
-    print("Random Cube. Пустая строка — выход.")
+    print("Random Cube. Press Enter on an empty line to quit.")
     while True:
-        raw = input("Введите N (кубик выдаст число от 1 до N): ").strip()
+        raw = input("Enter N (the die rolls a number from 1 to N): ").strip()
         if not raw:
             break
         if not raw.isdigit() or int(raw) < 1:
-            print("Нужно целое число от 1 и больше.")
+            print("Please enter a whole number of 1 or more.")
             continue
-        print("Выпало:", roll(int(raw)))
+        print("You rolled:", roll(int(raw)))
 
 
 if __name__ == "__main__":

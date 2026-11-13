@@ -1,6 +1,6 @@
 /* =========================================================
-   Random Cube — стили
-   Без внешних шрифтов и библиотек: только системные гарнитуры.
+   Random Cube — styles
+   No external fonts or libraries: system typefaces only.
    ========================================================= */
 
 :root {
@@ -18,7 +18,7 @@
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  /* размер кубика */
+  /* die size */
   --s: clamp(92px, 19vmin, 150px);
   --h: calc(var(--s) / 2);
 }
@@ -42,7 +42,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* лёгкое зерно поверх всего — статичная текстура, не анимируется */
+/* subtle film grain over everything: a static texture, never animated */
 .grain {
   position: fixed;
   inset: 0;
@@ -67,7 +67,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   outline-offset: 3px;
 }
 
-/* ---------------- Шапка ---------------- */
+/* ---------------- Header ---------------- */
 
 .top {
   display: flex;
@@ -150,7 +150,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .icon-btn[aria-pressed="false"] .ico-on { display: none; }
 .icon-btn[aria-pressed="false"] .ico-off { display: block; }
 
-/* ---------------- Сцена ---------------- */
+/* ---------------- Stage ---------------- */
 
 .hero {
   position: relative;
@@ -210,7 +210,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
   outline: none;
-  /* мягко растворяем края сцены вместо жёсткой обрезки */
+  /* fade the stage edges out softly instead of a hard clip */
   -webkit-mask-image:
     linear-gradient(to bottom, #000 70%, transparent 98%),
     linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%);
@@ -231,7 +231,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   transform: rotateX(-34deg);
 }
 
-/* сукно стола: эллипс в перспективе + тонкое золотое кольцо */
+/* table felt: an ellipse in perspective + a thin gold ring */
 .felt {
   position: absolute;
   left: calc(var(--s) * -4);
@@ -256,7 +256,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   will-change: transform, opacity;
 }
 
-/* ---------------- Кубик ---------------- */
+/* ---------------- Die ---------------- */
 
 .die {
   position: absolute;
@@ -268,7 +268,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   will-change: transform;
 }
 
-/* материалы */
+/* materials */
 .die[data-skin="ivory"] {
   --f1: #fffcf4; --f2: #ebe2d0; --edge: #cfc3ab;
   --pip: #17151b; --pip-hi: #3a3640; --pip-one: #b5132f; --pip-one-hi: #e0475f;
@@ -305,7 +305,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
     inset 0 0 calc(var(--s) * .11) rgba(0, 0, 0, .32);
 }
 
-/* внутренние плоскости закрывают «дырки» в скруглённых углах */
+/* inner planes fill the gaps at the rounded corners */
 .core {
   left: calc(var(--s) * -.485);
   top: calc(var(--s) * -.485);
@@ -372,7 +372,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   text-underline-offset: .1em;
 }
 
-/* ---------------- Пульт ---------------- */
+/* ---------------- Controls ---------------- */
 
 .console {
   position: relative;
@@ -503,7 +503,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   color: rgba(35, 23, 10, .75);
 }
 
-/* ---------------- Карточки ---------------- */
+/* ---------------- Cards ---------------- */
 
 .cards {
   display: grid;
@@ -632,7 +632,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   color: var(--dim);
 }
 
-/* ---------------- Эффекты ---------------- */
+/* ---------------- Effects ---------------- */
 
 .fx {
   position: fixed;
@@ -648,7 +648,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   will-change: transform, opacity;
 }
 
-/* ---------------- Адаптив ---------------- */
+/* ---------------- Responsive ---------------- */
 
 @media (max-width: 860px) {
   .cards { grid-template-columns: 1fr; }

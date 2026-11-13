@@ -65,12 +65,12 @@ python random_cube.py
 ```
 
 ```
-Random Cube. Пустая строка — выход.
-Введите N (кубик выдаст число от 1 до N): 20
-Выпало: 14
+Random Cube. Press Enter on an empty line to quit.
+Enter N (the die rolls a number from 1 to N): 20
+You rolled: 14
 ```
 
-Requires Python 3.6+ with no dependencies. The script's prompts are in Russian. Press Enter on an empty line to exit.
+Requires Python 3.6+ with no dependencies. Press Enter on an empty line to exit.
 
 ## Project structure
 
